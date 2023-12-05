@@ -1,0 +1,39 @@
+---
+title: "ma132_enrollment"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(nycflights13)
+library(tidyverse)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+library(here)
+library(skimr)
+
+```
+
+
+```{r}
+df_cu=read_csv(here("data_raw","CU_ACAD_DEPT_WHEN_OFF_ENRL.csv ")) |> clean_names()
+```
+```{r}
+df_cu
+```
+```{r}
+skimr::skim(df_cu)
+```
+```{r}
+df_calc=df_cu |>
+  select(-acad_org,-title,-current_status,-course_id) |>
+  filter(subject=="MA",
+         catalog %in% c(125,131,132),
+         component=="LEC")
+df_calc
+```
+

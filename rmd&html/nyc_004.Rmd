@@ -1,0 +1,110 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+**Marco Camalich**, **Josh Alessio**, and **Kashyap Vallur**
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+
+```{r}
+plot(cars)
+library(nycflights13)
+library(tidyverse)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+```
+
+
+```{r}
+```
+
+
+```{r}
+library(here)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```{r}
+df2017=read_csv(here("data_raw","DL_SelectFields_2017.zip")) |> clean_names()
+df2018=read_csv(here("data_raw","DL_SelectFields_2018.zip")) |> clean_names()
+df2019=read_csv(here("data_raw","DL_SelectFields_2019.zip")) |> clean_names()
+df2020=read_csv(here("data_raw","DL_SelectFields_2020.zip")) |> clean_names()
+df2021=read_csv(here("data_raw","DL_SelectFields_2021.zip")) |> clean_names()
+df2022=read_csv(here("data_raw","DL_SelectFields_2022.zip")) |> clean_names()
+df2023=read_csv(here("data_raw","DL_SelectFields_2023.zip")) |> clean_names()
+```
+```{r}
+dfc = bind_rows(df2017,df2018,df2019,df2020,df2021,df2022,df2023)
+
+
+```
+
+```{r}
+dfc2=dfc |> filter(passengers>0,origin=="LGA" | dest=="LGA")|> mutate(by_month=ym(str_c(year,"-",month)))
+```
+```{r}
+dfc2 |> ggplot(aes(month)) + geom_bar(aes(weight=passengers))
+```
+```{r}
+dfc2 |> ggplot(aes(year)) + geom_bar(aes(weight=passengers))+ggtitle("total passengers by year over multiyear period")
+```
+```{r}
+dfc3=dfc |> filter(passengers>0,origin=="LGA" & dest=="MIA")|> mutate(by_month=ym(str_c(year,"-",month)))
+dfc4=dfc |> filter(passengers>0,origin=="MIA" & dest=="LGA")|> mutate(by_month=ym(str_c(year,"-",month)))
+dfc3_passengers <- sum(dfc3$passengers)
+dfc4_passengers <- sum(dfc4$passengers)
+cat("Total passengers from LGA to MIA: ", dfc3_passengers, "\n")
+cat("Total passengers from MIA to LGA: ", dfc4_passengers, "\n")
+if (dfc3_passengers>dfc4_passengers) {
+cat("There are more passengers from LGA to MIA than backwards.")
+} else{
+  cat("There are more passengers from MIA to LGA than backwards.")
+}
+dfc5=dfc |> filter(passengers>0,(origin=="MIA" & dest=="LGA")|(origin=="LGA" & dest=="MIA"))|> mutate(time_year = year + month / 12)
+```
+```{r}
+dfc5 |> ggplot(aes(x = time_year)) + geom_bar(aes(weight=passengers, color = origin), position="dodge")+ggtitle("total passengers by year over multiyear period, between LGA and MIA")
+```
+
+```{r}
+dfc5 |> ggplot(aes(x = time_year)) + geom_bar(aes(weight=passengers), position="dodge")+ggtitle("Cummulative sum between LGA and MIA and viceversa")
+```
+```{r}
+dfc3=dfc |> filter(passengers>0,origin=="LGA" & dest=="MIA")|> mutate(time_year = year + month / 12)
+dfc4=dfc |> filter(passengers>0,origin=="MIA" & dest=="LGA")|> mutate(time_year = year + month / 12)
+dfcc <- dfc3 %>%
+  select(time_year, passengers) %>%
+  rename(passengers_dfc3 = passengers) %>%
+  left_join(
+    dfc4 %>%
+      select(time_year, passengers) %>%
+      rename(passengers_dfc4 = passengers),
+    by = "time_year"
+  ) %>%
+  mutate(passenger_diff = passengers_dfc3 - passengers_dfc4)
+
+ 
+
+dfcc |> ggplot(aes(x = time_year)) + geom_bar(aes(weight=passenger_diff), position="dodge")+ggtitle("Difference between passengers between LGA and MIA and viceversa")+labs(subtitle = "If the bar is possitive, LGA-MIA had more passengers travelling. If its negative, MIA-LGA had more")
+```
+```{r}
+df_f=dfc %>%
+  filter(dest == "MIA" | origin == "MIA") %>%
+  group_by(origin,month) %>%
+  summarise(passengers=sum(passengers)) %>%
+  mutate(cum_pass=cumsum(passengers)) %>%
+  pivot_wider(names_from = origin, 
+              values_from = c("passengers", "cum_pass")) %>%
+  mutate(net_to_miami=passengers_LGA-passengers_MIA,
+         cum_to_miami=cum_pass_LGA-cum_pass_MIA)
+                
+            
+```
+
